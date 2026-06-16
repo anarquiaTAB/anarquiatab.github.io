@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANARQUIA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', sans-serif;
+            min-height: 100vh;
+        }
+        .anarquia-container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+        /* Tela de login */
+        .login-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at center, #1a0a0a, #0a0a0f);
+        }
+        .login-card {
+            background: rgba(255,255,255,0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            border-radius: 30px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 25px 60px rgba(220, 38, 38, 0.15);
+        }
+        .login-card h2 { color: #dc2626; font-weight: 700; margin-bottom: 25px; text-align: center; }
+        .login-card h2 i { color: #dc2626; }
+        .login-card .subtitle { color: #666; text-align: center; margin-bottom: 25px; font-size: 0.9rem; }
+        .login-card input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            color: #fff;
+            border-radius: 12px;
+            padding: 12px 16px;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+        .login-card input:focus {
+            outline: none;
+            border-color: #dc2626;
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+        }
+        .login-card button {
+            background: linear-gradient(135deg, #991b1b, #dc2626);
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            width: 100%;
+            color: #fff;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .login-card button:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3); }
+        .login-card .error-msg { color: #f87171; font-size: 0.9rem; text-align: center; margin-top: 10px; }
+        .login-card .ip-hint { font-size: 0.7rem; color: #444; text-align: center; margin-top: 15px; }
+
+        /* Sidebar */
+        .sidebar {
+            background: rgba(255,255,255,0.02);
+            border-right: 1px solid rgba(220, 38, 38, 0.1);
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        .sidebar .brand { text-align: center; padding: 10px 0 20px; border-bottom: 1px solid rgba(220, 38, 38, 0.1); }
+        .sidebar .brand h4 { color: #dc2626; font-weight: 700; }
+        .sidebar .brand h4 i { color: #dc2626; }
+        .sidebar .brand small { color: #555; }
+        .sidebar .user-info { text-align: center; padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .sidebar .user-info img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid #dc2626;
+            object-fit: cover;
+        }
+        .sidebar .user-info h6 { color: #fff; margin-top: 8px; }
+        .sidebar .user-info small { color: #666; }
+        .sidebar .user-info .reputation { color: #dc2626; font-size: 0.8rem; display: block; margin-top: 4px; }
+        .sidebar .nav-link {
+            color: #888;
+            border-radius: 12px;
+            margin: 3px 12px;
+            padding: 10px 16px;
+            transition: 0.2s;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background: rgba(220, 38, 38, 0.12);
+            color: #fff;
+        }
+        .sidebar .nav-link i { width: 24px; color: #dc2626; }
+        .sidebar .logout-btn {
+            background: rgba(248, 113, 113, 0.1);
+            border: none;
+            color: #f87171;
+            padding: 10px;
+            border-radius: 12px;
+            width: calc(100% - 24px);
+            margin: 10px 12px;
+            transition: 0.2s;
+        }
+        .sidebar .logout-btn:hover { background: rgba(248, 113, 113, 0.2); }
+
+        /* Conteúdo */
+        .content-area { padding: 20px; max-height: 100vh; overflow-y: auto; }
+        .content-area h3 { color: #dc2626; margin-bottom: 20px; font-weight: 600; }
+        .content-area h3 i { color: #dc2626; }
+
+        /* Cards */
+        .card-red {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(220, 38, 38, 0.1);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+            transition: 0.2s;
+        }
+        .card-red:hover { background: rgba(255,255,255,0.04); border-color: rgba(220, 38, 38, 0.2); }
+
+        /* Posts */
+        .post-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(220, 38, 38, 0.08);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+            transition: 0.2s;
+        }
+        .post-card:hover { background: rgba(255,255,255,0.04); border-color: rgba(220, 38, 38, 0.15); }
+        .post-card .post-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+        .post-card .post-header img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #dc2626;
+        }
+        .post-card .post-header strong { color: #fff; }
+        .post-card .post-header small { color: #666; font-size: 0.75rem; }
+        .post-card .post-header .badge-anarquia { background: rgba(220, 38, 38, 0.2); color: #dc2626; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; }
+        .post-card p { color: #ccc; margin-bottom: 8px; }
+        .post-card .post-actions { display: flex; gap: 20px; color: #666; font-size: 0.85rem; }
+        .post-card .post-actions i { cursor: pointer; transition: 0.2s; }
+        .post-card .post-actions i:hover { color: #dc2626; }
+        .pinned-post { border-left: 3px solid #dc2626; background: rgba(220, 38, 38, 0.05); }
+
+        /* Enquetes */
+        .poll-option { padding: 8px 12px; margin: 4px 0; background: rgba(255,255,255,0.03); border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .poll-option:hover { background: rgba(220, 38, 38, 0.1); }
+        .poll-option .poll-bar { height: 6px; background: #dc2626; border-radius: 10px; margin-top: 4px; }
+
+        /* Chat */
+        .chat-container {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(220, 38, 38, 0.08);
+            border-radius: 16px;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 16px; }
+        .chat-messages .msg { margin-bottom: 12px; display: flex; align-items: start; gap: 10px; }
+        .chat-messages .msg img { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #dc2626; }
+        .chat-messages .msg .content { background: rgba(255,255,255,0.04); padding: 8px 14px; border-radius: 12px; max-width: 70%; }
+        .chat-messages .msg .content strong { color: #dc2626; }
+        .chat-messages .msg .content small { color: #666; font-size: 0.7rem; }
+        .chat-messages .msg .content .mention { color: #dc2626; font-weight: 600; }
+        .chat-input {
+            display: flex;
+            gap: 10px;
+            padding: 12px;
+            border-top: 1px solid rgba(220, 38, 38, 0.08);
+        }
+        .chat-input input {
+            flex: 1;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(220, 38, 38, 0.08);
+            border-radius: 12px;
+            padding: 10px 16px;
+            color: #fff;
+        }
+        .chat-input input:focus { outline: none; border-color: #dc2626; }
+        .chat-input button {
+            background: #dc2626;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+            color: #fff;
+            font-weight: 600;
+        }
+        .chat-input button:hover { background: #991b1b; }
+
+        /* Chamada */
+        .call-container { background: rgba(0,0,0,0.2); border-radius: 16px; padding: 40px; text-align: center; }
+
+        /* Admin */
+        .admin-panel .ip-list { background: rgba(255,255,255,0.02); border-radius: 12px; padding: 16px; }
+        .admin-panel .ip-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .admin-panel .ip-item button { background: none; border: none; color: #f87171; cursor: pointer; }
+
+        /* Regras */
+        .rules-list { list-style: none; padding: 0; }
+        .rules-list li { padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.03); display: flex; gap: 12px; align-items: start; }
+        .rules-list li .num { color: #dc2626; font-weight: 700; min-width: 30px; }
+
+        /* Botões */
+        .btn-primary-red {
+            background: #dc2626;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 20px;
+            color: #fff;
+            transition: 0.2s;
+        }
+        .btn-primary-red:hover { background: #991b1b; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3); }
+
+        /* Modais */
+        .modal-content { background: #12121a; color: #e0e0e0; border: 1px solid rgba(220, 38, 38, 0.15); }
+        .modal-header { border-bottom: 1px solid rgba(220, 38, 38, 0.08); }
+        .modal-footer { border-top: 1px solid rgba(220, 38, 38, 0.08); }
+        .modal .form-control { background: rgba(255,255,255,0.04); border: 1px solid rgba(220, 38, 38, 0.08); color: #fff; }
+        .modal .form-control:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(220, 38, 38, 0.3); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(220, 38, 38, 0.5); }
+
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .sidebar { height: auto; position: relative; }
+            .content-area { max-height: none; }
+            .chat-container { height: 350px; }
+        }
+
+        /* Tema claro */
+        body.light-theme {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+        body.light-theme .sidebar { background: #fff; border-right: 1px solid #e0e0e0; }
+        body.light-theme .card-red, body.light-theme .post-card { background: #fff; border-color: #e0e0e0; }
+        body.light-theme .post-card p { color: #333; }
+        body.light-theme .chat-container { background: #fff; border-color: #e0e0e0; }
+        body.light-theme .chat-input input { background: #f0f0f0; color: #333; border-color: #ddd; }
+        body.light-theme .sidebar .nav-link { color: #555; }
+        body.light-theme .sidebar .nav-link:hover { background: rgba(220, 38, 38, 0.08); }
+        body.light-theme .sidebar .user-info small { color: #888; }
+    </style>
+</head>
+<body>
+
+<!-- ============================================ -->
+<!-- TELA DE LOGIN                                 -->
+<!-- ============================================ -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-card">
+        <h2><i class="fas fa-fire"></i> ANARQUIA</h2>
+        <p class="subtitle">Rede Privada · Acesso Restrito</p>
+        <input type="text" id="loginIp" class="form-control" placeholder="Seu IP" value="" />
+        <input type="password" id="loginSenha" class="form-control" placeholder="Senha de acesso" />
+        <button id="loginBtn"><i class="fas fa-key"></i> Entrar</button>
+        <div id="loginError" class="error-msg"></div>
+        <div class="ip-hint">IPs autorizados: rafael, kayo, enzo</div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- APLICAÇÃO PRINCIPAL                          -->
+<!-- ============================================ -->
+<div class="main-app" id="mainApp" style="display:none;">
+    <div class="container-fluid anarquia-container">
+        <div class="row">
+            <!-- SIDEBAR -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="brand">
+                    <h4><i class="fas fa-fire"></i> ANARQUIA</h4>
+                    <small>privado</small>
+                </div>
+                <div class="user-info" id="userInfoSidebar">
+                    <img id="userAvatar" src="https://ui-avatars.com/api/?name=U&background=991b1b&color=fff&size=80" alt="Avatar" />
+                    <h6 id="userNameDisplay">Usuário</h6>
+                    <small id="userRoleDisplay">Membro</small>
+                    <span class="reputation" id="userReputation">⭐ 0 pts</span>
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" data-page="feed" href="#"><i class="fas fa-rss"></i> Feed</a>
+                    <a class="nav-link" data-page="chat" href="#"><i class="fas fa-comments"></i> Chat</a>
+                    <a class="nav-link" data-page="call" href="#"><i class="fas fa-phone"></i> Chamada</a>
+                    <a class="nav-link" data-page="storage" href="#"><i class="fas fa-box"></i> Arquivos</a>
+                    <a class="nav-link" data-page="links" href="#"><i class="fas fa-link"></i> Links</a>
+                    <a class="nav-link" data-page="rules" href="#"><i class="fas fa-gavel"></i> Regras</a>
+                    <a class="nav-link admin-panel-link" data-page="admin" href="#" style="display:none;"><i class="fas fa-gear"></i> Admin</a>
+                </nav>
+                <button class="logout-btn" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Sair</button>
+                <button class="logout-btn" id="themeToggleBtn" style="margin-top:5px; background:rgba(255,255,255,0.05); color:#888;"><i class="fas fa-moon"></i> Tema</button>
+            </div>
+
+            <!-- CONTEÚDO -->
+            <div class="col-md-9 col-lg-10 content-area" id="contentArea">
+                <!-- PÁGINA: FEED -->
+                <div id="page-feed" class="page-content">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h3><i class="fas fa-rss"></i> Feed</h3>
+                        <div>
+                            <button class="btn btn-primary-red me-2" id="newPostBtn"><i class="fas fa-plus"></i> Post</button>
+                            <button class="btn btn-primary-red" id="newPollBtn" style="background:#6b21a5;"><i class="fas fa-chart-pie"></i> Enquete</button>
+                        </div>
+                    </div>
+                    <div id="feedContainer"><p style="color:#666;">Carregando posts...</p></div>
+                </div>
+
+                <!-- PÁGINA: CHAT -->
+                <div id="page-chat" class="page-content" style="display:none;">
+                    <h3><i class="fas fa-comments"></i> Chat</h3>
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages"><p style="color:#666;text-align:center;">Bem-vindo ao chat!</p></div>
+                        <div class="chat-input">
+                            <input type="text" id="chatInput" placeholder="Digite uma mensagem... (@ para mencionar)" />
+                            <button id="sendChatBtn"><i class="fas fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PÁGINA: CHAMADA -->
+                <div id="page-call" class="page-content" style="display:none;">
+                    <h3><i class="fas fa-phone"></i> Chamada</h3>
+                    <div style="background:rgba(255,255,255,0.02); border-radius:16px; padding:20px; text-align:center;">
+                        <div class="call-container">
+                            <i class="fas fa-video" style="font-size:4rem; color:#dc2626;"></i>
+                            <p style="color:#888; margin-top:10px;">Compartilhamento de tela e voz</p>
+                        </div>
+                        <div class="d-flex justify-content-center gap-3 flex-wrap mt-3">
+                            <button class="btn btn-success" id="startCallBtn" style="border-radius:50px; padding:12px 30px;"><i class="fas fa-phone"></i> Iniciar</button>
+                            <button class="btn btn-danger" id="endCallBtn" style="border-radius:50px; padding:12px 30px; display:none;"><i class="fas fa-phone-slash"></i> Encerrar</button>
+                            <button class="btn btn-info" id="shareScreenBtn" style="border-radius:50px; padding:12px 30px;"><i class="fas fa-desktop"></i> Tela</button>
+                        </div>
+                        <div id="callStatus" style="margin-top:20px; color:#666;">Pronto para iniciar</div>
+                        <div id="videoContainer" style="margin-top:20px; display:none;">
+                            <video id="localVideo" autoplay muted style="width:100%; max-width:400px; border-radius:12px; background:#111;"></video>
+                            <video id="remoteVideo" autoplay style="width:100%; max-width:400px; border-radius:12px; background:#111; margin-top:10px;"></video>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PÁGINA: ARQUIVOS -->
+                <div id="page-storage" class="page-content" style="display:none;">
+                    <h3><i class="fas fa-box"></i> Arquivos</h3>
+                    <div style="background:rgba(255,255,255,0.02); border-radius:16px; padding:20px;">
+                        <div class="d-flex gap-2 mb-3 flex-wrap">
+                            <input type="text" id="fileUrlInput" class="form-control" placeholder="URL do arquivo" style="flex:1; min-width:150px; background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;" />
+                            <input type="text" id="fileNameInput" class="form-control" placeholder="Nome" style="max-width:200px; background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;" />
+                            <select id="fileCategory" class="form-control" style="max-width:150px; background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;">
+                                <option value="Geral">Geral</option>
+                                <option value="Docs">Docs</option>
+                                <option value="Imagens">Imagens</option>
+                                <option value="Videos">Vídeos</option>
+                            </select>
+                            <button class="btn btn-primary-red" id="addFileBtn">Adicionar</button>
+                        </div>
+                        <div id="filesList" style="color:#888;"><p>Nenhum arquivo adicionado.</p></div>
+                    </div>
+                </div>
+
+                <!-- PÁGINA: LINKS -->
+                <div id="page-links" class="page-content" style="display:none;">
+                    <h3><i class="fas fa-link"></i> Links Úteis</h3>
+                    <div style="background:rgba(255,255,255,0.02); border-radius:16px; padding:20px;">
+                        <div class="d-flex gap-2 mb-3 flex-wrap">
+                            <input type="text" id="linkUrlInput" class="form-control" placeholder="URL" style="flex:1; min-width:150px; background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;" />
+                            <input type="text" id="linkTitleInput" class="form-control" placeholder="Título" style="max-width:200px; background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;" />
+                            <button class="btn btn-primary-red" id="addLinkBtn">Adicionar</button>
+                        </div>
+                        <div id="linksList" style="color:#888;"><p>Nenhum link salvo.</p></div>
+                    </div>
+                </div>
+
+                <!-- PÁGINA: REGRAS -->
+                <div id="page-rules" class="page-content" style="display:none;">
+                    <h3><i class="fas fa-gavel"></i> Regras da ANARQUIA</h3>
+                    <div style="background:rgba(255,255,255,0.02); border-radius:16px; padding:20px;">
+                        <ul class="rules-list" id="rulesList"></ul>
+                        <div id="rulesAdminArea" style="display:none; margin-top:20px; border-top:1px solid rgba(220,38,38,0.08); padding-top:20px;">
+                            <h6 style="color:#dc2626;">Editar Regras</h6>
+                            <textarea id="rulesEditor" class="form-control" rows="6" style="background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;"></textarea>
+                            <button class="btn btn-primary-red mt-2" id="saveRulesBtn">Salvar Regras</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PÁGINA: ADMIN -->
+                <div id="page-admin" class="page-content admin-panel" style="display:none;">
+                    <h3><i class="fas fa-gear"></i> Painel Admin</h3>
+                    <div style="background:rgba(255,255,255,0.02); border-radius:16px; padding:20px;">
+                        <h5 style="color:#dc2626;">Gerenciar IPs</h5>
+                        <div class="d-flex gap-2 mb-3 flex-wrap">
+                            <input type="text" id="newIpInput" class="form-control" placeholder="IP" style="flex:1; min-width:150px; background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;" />
+                            <input type="text" id="newIpName" class="form-control" placeholder="Nome" style="max-width:150px; background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;" />
+                            <button class="btn btn-primary-red" id="addIpBtn">Adicionar IP</button>
+                        </div>
+                        <div id="ipList" class="ip-list"></div>
+                        <hr style="border-color:rgba(220,38,38,0.08);" />
+                        <h5 style="color:#dc2626;">Convite</h5>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="inviteLinkDisplay" class="form-control" placeholder="Link de convite" style="background:rgba(255,255,255,0.04); border:1px solid rgba(220,38,38,0.08); color:#fff;" readonly />
+                            <button class="btn btn-primary-red" id="generateInviteBtn">Gerar Link</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- MODAIS                                       -->
+<!-- ============================================ -->
+<!-- Modal: Novo Post -->
+<div class="modal fade" id="newPostModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-pen" style="color:#dc2626;"></i> Novo Post</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="postContent" class="form-control" rows="4" placeholder="O que você está pensando?"></textarea>
+                <input type="text" id="postImage" class="form-control mt-2" placeholder="URL da imagem (opcional)" />
+                <div class="mt-2"><label><input type="checkbox" id="postPinned" /> Fixar post (admin apenas)</label></div>
+                <div class="mt-2"><label><input type="checkbox" id="postAnonymous" /> Postar anonimamente</label></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" style="background:rgba(255,255,255,0.05); border:none;">Cancelar</button>
+                <button class="btn btn-primary-red" id="publishPostBtn">Publicar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nova Enquete -->
+<div class="modal fade" id="newPollModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-chart-pie" style="color:#dc2626;"></i> Nova Enquete</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="pollQuestion" class="form-control" placeholder="Pergunta da enquete" />
+                <div id="pollOptionsContainer">
+                    <input type="text" class="form-control mt-2 poll-option-input" placeholder="Opção 1" />
+                    <input type="text" class="form-control mt-2 poll-option-input" placeholder="Opção 2" />
+                </div>
+                <button class="btn btn-sm btn-primary-red mt-2" id="addPollOptionBtn"><i class="fas fa-plus"></i> Adicionar opção</button>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal" style="background:rgba(255,255,255,0.05); border:none;">Cancelar</button>
+                <button class="btn btn-primary-red" id="publishPollBtn">Publicar Enquete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================ -->
+<!-- SCRIPTS                                      -->
+<!-- ============================================ -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function() {
+        "use strict";
+
+        // ============================================
+        // CONFIGURAÇÃO
+        // ============================================
+        const SENHA_ACESSO = "5000";
+
+        let allowedIPs = {
+            "rafael": "170.254.133.110",
+            "kayo": "177.7.84.142",
+            "enzo": "170.254.134.98"
+        };
+
+        let currentUser = null;
+        let posts = [];
+        let messages = [];
+        let files = [];
+        let links = [];
+        let rules = [
+            "Respeite todos os membros. Ofensas não serão toleradas.",
+            "Conteúdo NSFW apenas no canal apropriado (se houver).",
+            "Não compartilhe informações pessoais de outros membros.",
+            "Divulgação de outros grupos apenas com autorização.",
+            "Use o bom senso. A ANARQUIA é liberdade, não bagunça."
+        ];
+        let reputation = {};
+        let polls = [];
+
+        // ============================================
+        // FUNÇÕES AUXILIARES
+        // ============================================
+        function obterIP() {
+            return new Promise((resolve) => {
+                fetch('https://api.ipify.org?format=json')
+                    .then(res => res.json())
+                    .then(data => resolve(data.ip))
+                    .catch(() => resolve('0.0.0.0'));
+            });
+        }
+
+        function getCurrentUserData() {
+            const data = localStorage.getItem('anarquia_user_data');
+            return data ? JSON.parse(data) : null;
+        }
+
+        function setCurrentUserData(data) {
+            localStorage.setItem('anarquia_user_data', JSON.stringify(data));
+        }
+
+        function saveAppData() {
+            localStorage.setItem('anarquia_posts', JSON.stringify(posts));
+            localStorage.setItem('anarquia_messages', JSON.stringify(messages));
+            localStorage.setItem('anarquia_files', JSON.stringify(files));
+            localStorage.setItem('anarquia_links', JSON.stringify(links));
+            localStorage.setItem('anarquia_rules', JSON.stringify(rules));
+            localStorage.setItem('anarquia_reputation', JSON.stringify(reputation));
+            localStorage.setItem('anarquia_allowed_ips', JSON.stringify(allowedIPs));
+        }
+
+        function loadAppData() {
+            try {
+                if (localStorage.getItem('anarquia_posts')) posts = JSON.parse(localStorage.getItem('anarquia_posts'));
+                if (localStorage.getItem('anarquia_messages')) messages = JSON.parse(localStorage.getItem('anarquia_messages'));
+                if (localStorage.getItem('anarquia_files')) files = JSON.parse(localStorage.getItem('anarquia_files'));
+                if (localStorage.getItem('anarquia_links')) links = JSON.parse(localStorage.getItem('anarquia_links'));
+                if (localStorage.getItem('anarquia_rules')) rules = JSON.parse(localStorage.getItem('anarquia_rules'));
+                if (localStorage.getItem('anarquia_reputation')) reputation = JSON.parse(localStorage.getItem('anarquia_reputation'));
+                if (localStorage.getItem('anarquia_allowed_ips')) allowedIPs = JSON.parse(localStorage.getItem('anarquia_allowed_ips'));
+            } catch (e) {}
+        }
+
+        // ============================================
+        // LOGIN
+        // ============================================
+        async function verificarAcesso() {
+            const ip = document.getElementById('loginIp').value.trim();
+            const senha = document.getElementById('loginSenha').value.trim();
+            const errorDiv = document.getElementById('loginError');
+
+            if (!ip) { errorDiv.textContent = 'Insira seu IP.'; return; }
+            if (senha !== SENHA_ACESSO) { errorDiv.textContent = 'Senha incorreta!'; return; }
+            if (!Object.values(allowedIPs).includes(ip)) {
+                errorDiv.textContent = '❌ IP não autorizado.';
+                return;
+            }
+
+            let userName = Object.keys(allowedIPs).find(key => allowedIPs[key] === ip) || 'Usuário';
+            const savedData = getCurrentUserData();
+
+            if (savedData && savedData.ip === ip) {
+                currentUser = savedData;
+                entrarNoApp();
+                return;
+            }
+
+            const nome = prompt('👋 Escolha seu nome:', userName);
+            if (!nome) { errorDiv.textContent = 'Cadastro cancelado.'; return; }
+            const avatar = prompt('📸 URL da foto (opcional):', '');
+            const senhaLocal = prompt('🔒 Senha do perfil (opcional):', '');
+
+            currentUser = {
+                nome: nome,
+                ip: ip,
+                avatar: avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(nome)}&background=991b1b&color=fff&size=80`,
+                senha: senhaLocal || '',
+                role: ip === allowedIPs['rafael'] ? 'admin' : 'membro'
+            };
+            setCurrentUserData(currentUser);
+            entrarNoApp();
+        }
+
+        function entrarNoApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            loadAppData();
+            carregarApp();
+        }
+
+        // ============================================
+        // CARREGAR APP
+        // ============================================
+        function carregarApp() {
+            atualizarSidebar();
+            atualizarFeed();
+            atualizarChat();
+            atualizarArquivos();
+            atualizarLinks();
+            atualizarRegras();
+            atualizarAdmin();
+
+            if (currentUser && currentUser.role === 'admin') {
+                document.querySelector('.admin-panel-link').style.display = 'block';
+                document.getElementById('rulesAdminArea').style.display = 'block';
+                document.getElementById('rulesEditor').value = rules.map((r, i) => `${i+1}. ${r}`).join('\n');
+            }
+
+            // Navegação
+            document.querySelectorAll('.nav-link[data-page]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const page = this.dataset.page;
+                    mostrarPagina(page);
+                    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', function() {
+                if (confirm('Sair?')) {
+                    localStorage.removeItem('anarquia_user_data');
+                    location.reload();
+                }
+            });
+
+            // Tema
+            document.getElementById('themeToggleBtn').addEventListener('click', function() {
+                document.body.classList.toggle('light-theme');
+                this.innerHTML = document.body.classList.contains('light-theme') ?
+                    '<i class="fas fa-sun"></i> Claro' : '<i class="fas fa-moon"></i> Tema';
+            });
+
+            // Posts
+            document.getElementById('newPostBtn').addEventListener('click', () => new bootstrap.Modal(document.getElementById('newPostModal')).show());
+            document.getElementById('publishPostBtn').addEventListener('click', publicarPost);
+
+            // Enquetes
+            document.getElementById('newPollBtn').addEventListener('click', () => new bootstrap.Modal(document.getElementById('newPollModal')).show());
+            document.getElementById('addPollOptionBtn').addEventListener('click', adicionarOpcaoEnquete);
+            document.getElementById('publishPollBtn').addEventListener('click', publicarEnquete);
+
+            // Chat
+            document.getElementById('sendChatBtn').addEventListener('click', enviarMensagem);
+            document.getElementById('chatInput').addEventListener('keypress', e => { if (e.key === 'Enter') enviarMensagem(); });
+
+            // Chamada
+            document.getElementById('startCallBtn').addEventListener('click', iniciarChamada);
+            document.getElementById('endCallBtn').addEventListener('click', encerrarChamada);
+            document.getElementById('shareScreenBtn').addEventListener('click', compartilharTela);
+
+            // Arquivos
+            document.getElementById('addFileBtn').addEventListener('click', adicionarArquivo);
+
+            // Links
+            document.getElementById('addLinkBtn').addEventListener('click', adicionarLink);
+
+            // Admin
+            document.getElementById('addIpBtn').addEventListener('click', adicionarIP);
+            document.getElementById('generateInviteBtn').addEventListener('click', gerarConvite);
+            document.getElementById('saveRulesBtn').addEventListener('click', salvarRegras);
+
+            mostrarPagina('feed');
+        }
+
+        // ============================================
+        // SIDEBAR
+        // ============================================
+        function atualizarSidebar() {
+            if (!currentUser) return;
+            document.getElementById('userAvatar').src = currentUser.avatar;
+            document.getElementById('userNameDisplay').textContent = currentUser.nome;
+            document.getElementById('userRoleDisplay').textContent = currentUser.role === 'admin' ? '👑 Admin' : 'Membro';
+            const rep = reputation[currentUser.nome] || 0;
+            document.getElementById('userReputation').textContent = `⭐ ${rep} pts`;
+        }
+
+        // ============================================
+        // PÁGINAS
+        // ============================================
+        function mostrarPagina(page) {
+            document.querySelectorAll('.page-content').forEach(el => el.style.display = 'none');
+            const target = document.getElementById(`page-${page}`);
+            if (target) {
+                target.style.display = 'block';
+                if (page === 'chat') atualizarChat();
+                if (page === 'feed') atualizarFeed();
+                if (page === 'storage') atualizarArquivos();
+                if (page === 'links') atualizarLinks();
+                if (page === 'rules') atualizarRegras();
+                if (page === 'admin') atualizarAdmin();
+            }
+        }
+
+        // ============================================
+        // FEED
+        // ============================================
+        function atualizarFeed() {
+            const container = document.getElementById('feedContainer');
+            if (!posts.length) {
+                container.innerHTML = `<p style="color: #666;">Nenhum post ainda. Seja o primeiro!</p>`;
+                return;
+            }
+
+            const sorted = [...posts].sort((a, b) => (a.pinned ? 1 : 0) - (b.pinned ? 1 : 0) || new Date(b.data) - new Date(a.data));
+
+            container.innerHTML = sorted.map((post, idx) => {
+                const realIndex = posts.indexOf(post);
+                return `
+                <div class="post-card ${post.pinned ? 'pinned-post' : ''}">
+                    <div class="post-header">
+                        <img src="${post.avatar || 'https://ui-avatars.com/api/?name=U&background=991b1b&color=fff'}" alt="${post.autor}" />
+                        <strong>${post.anonymous ? '🔻 Anônimo' : post.autor}</strong>
+                        ${post.pinned ? '<span class="badge-anarquia">📌 Fixado</span>' : ''}
+                        ${post.type === 'poll' ? '<span class="badge-anarquia">📊 Enquete</span>' : ''}
+                        <small>${new Date(post.data).toLocaleString()}</small>
+                    </div>
+                    <p>${post.conteudo}</p>
+                    ${post.imagem ? `<img src="${post.imagem}" style="max-width:100%; border-radius:12px; max-height:300px; object-fit:cover; margin-bottom:8px;" />` : ''}
+                    ${post.type === 'poll' ? gerarPollHTML(post, realIndex) : ''}
+                    <div class="post-actions">
+                        <span><i class="fas fa-heart" onclick="curtirPost(${realIndex})"></i> ${post.likes || 0}</span>
+                        <span><i class="fas fa-comment"></i> ${post.comentarios || 0}</span>
+                        ${currentUser && (currentUser.role === 'admin' || currentUser.nome === post.autor) ? `<span><i class="fas fa-trash" onclick="deletarPost(${realIndex})" style="color: #f87171;"></i></span>` : ''}
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function gerarPollHTML(post, index) {
+            if (!post.options) return '';
+            const total = post.options.reduce((s, o) => s + (o.votes || 0), 0);
+            return post.options.map((opt, i) => {
+                const pct = total > 0 ? Math.round((opt.votes || 0) / total * 100) : 0;
+                return `
+                <div class="poll-option" onclick="votarEnquete(${index}, ${i})">
+                    <div>${opt.text} <span style="float:right;color:#dc2626;">${pct}% (${opt.votes || 0})</span></div>
+                    <div class="poll-bar" style="width:${pct}%;"></div>
+                </div>
+            `}).join('');
+        }
+
+        function publicarPost() {
+            const conteudo = document.getElementById('postContent').value.trim();
+            const imagem = document.getElementById('postImage').value.trim();
+            const pinned = document.getElementById('postPinned').checked;
+            const anonymous = document.getElementById('postAnonymous').checked;
+
+            if (!conteudo) { alert('Escreva algo.'); return; }
+
+            posts.unshift({
+                autor: currentUser.nome,
+                avatar: currentUser.avatar,
+                conteudo: conteudo,
+                imagem: imagem || '',
+                data: new Date().toISOString(),
+                likes: 0,
+                comentarios: 0,
+                pinned: pinned && currentUser.role === 'admin',
+                anonymous: anonymous,
+                type: 'post'
+            });
+
+            if (!anonymous) {
+                reputation[currentUser.nome] = (reputation[currentUser.nome] || 0) + 1;
+            }
+
+            saveAppData();
+            atualizarFeed();
+            document.getElementById('postContent').value = '';
+            document.getElementById('postImage').value = '';
+            document.getElementById('postPinned').checked = false;
+            document.getElementById('postAnonymous').checked = false;
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newPostModal'));
+            if (modal) modal.hide();
+            atualizarSidebar();
+        }
+
+        // Enquetes
+        function adicionarOpcaoEnquete() {
+            const container = document.getElementById('pollOptionsContainer');
+            const count = container.querySelectorAll('.poll-option-input').length + 1;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control mt-2 poll-option-input';
+            input.placeholder = `Opção ${count}`;
+            container.appendChild(input);
+        }
+
+        function publicarEnquete() {
+            const pergunta = document.getElementById('pollQuestion').value.trim();
+            const inputs = document.querySelectorAll('.poll-option-input');
+            const opcoes = [];
+            inputs.forEach(inp => {
+                const txt = inp.value.trim();
+                if (txt) opcoes.push({ text: txt, votes: 0 });
+            });
+
+            if (!pergunta || opcoes.length < 2) {
+                alert('Preencha a pergunta e pelo menos 2 opções.');
+                return;
+            }
+
+            posts.unshift({
+                autor: currentUser.nome,
+                avatar: currentUser.avatar,
+                conteudo: pergunta,
+                data: new Date().toISOString(),
+                likes: 0,
+                comentarios: 0,
+                type: 'poll',
+                options: opcoes
+            });
+
+            saveAppData();
+            atualizarFeed();
+            document.getElementById('pollQuestion').value = '';
+            document.getElementById('pollOptionsContainer').innerHTML = `
+                <input type="text" class="form-control mt-2 poll-option-input" placeholder="Opção 1" />
+                <input type="text" class="form-control mt-2 poll-option-input" placeholder="Opção 2" />
+            `;
+            const modal = bootstrap.Modal.getInstance(document.getElementById('newPollModal'));
+            if (modal) modal.hide();
+        }
+
+        window.votarEnquete = function(postIndex, optionIndex) {
+            if (!currentUser) return;
+            const post = posts[postIndex];
+            if (!post || post.type !== 'poll') return;
+            if (post.votedBy && post.votedBy.includes(currentUser.nome)) {
+                alert('Você já votou nesta enquete!');
+                return;
+            }
+            post.options[optionIndex].votes = (post.options[optionIndex].votes || 0) + 1;
+            if (!post.votedBy) post.votedBy = [];
+            post.votedBy.push(currentUser.nome);
+            saveAppData();
+            atualizarFeed();
+        };
+
+        window.curtirPost = function(index) {
+            posts[index].likes = (posts[index].likes || 0) + 1;
+            if (!posts[index].anonymous) {
+                reputation[posts[index].autor] = (reputation[posts[index].autor] || 0) + 1;
+            }
+            saveAppData();
+            atualizarFeed();
+            atualizarSidebar();
+        };
+
+        window.deletarPost = function(index) {
+            if (confirm('Excluir este post?')) {
+                posts.splice(index, 1);
+                saveAppData();
+                atualizarFeed();
+            }
+        };
+
+        // ============================================
+        // CHAT
+        // ============================================
+        function atualizarChat() {
+            const container = document.getElementById('chatMessages');
+            if (!messages.length) {
+                container.innerHTML = `<p style="color: #666; text-align: center;">Nenhuma mensagem.</p>`;
+                return;
+            }
+            container.innerHTML = messages.map(msg => {
+                const hasMention = msg.texto.includes('@' + currentUser?.nome);
+                return `
+                <div class="msg">
+                    <img src="${msg.avatar || 'https://ui-avatars.com/api/?name=U&background=991b1b&color=fff'}" alt="${msg.autor}" />
+                    <div class="content" style="${hasMention ? 'border-left: 3px solid #dc2626;' : ''}">
+                        <strong>${msg.autor}</strong> <small>${new Date(msg.data).toLocaleTimeString()}</small>
+                        <p style="margin:4px 0 0 0;">${msg.texto.replace(/@(\w+)/g, '<span class="mention">@$1</span>')}</p>
+                    </div>
+                </div>
+            `}).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function enviarMensagem() {
+            const input = document.getElementById('chatInput');
+            const texto = input.value.trim();
+            if (!texto || !currentUser) return;
+
+            // Verifica menções
+            const mentions = texto.match(/@(\w+)/g);
+            if (mentions) {
+                mentions.forEach(m => {
+                    const nome = m.substring(1);
+                    if (Object.keys(allowedIPs).includes(nome.toLowerCase())) {
+                        console.log(`🔔 Menção para ${nome}`);
+                    }
+                });
+            }
+
+            messages.push({
+                autor: currentUser.nome,
+                avatar: currentUser.avatar,
+                texto: texto,
+                data: new Date().toISOString()
+            });
+
+            input.value = '';
+            saveAppData();
+            atualizarChat();
+        }
+
+        // ============================================
+        // CHAMADA
+        // ============================================
+        let localStream = null;
+        function iniciarChamada() {
+            document.getElementById('callStatus').textContent = '🎥 Iniciando...';
+            document.getElementById('startCallBtn').style.display = 'none';
+            document.getElementById('endCallBtn').style.display = 'inline-block';
+            document.getElementById('videoContainer').style.display = 'block';
+
+            navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+                .then(stream => {
+                    localStream = stream;
+                    document.getElementById('localVideo').srcObject = stream;
+                    document.getElementById('callStatus').textContent = '📞 Chamada ativa!';
+                })
+                .catch(err => {
+                    document.getElementById('callStatus').textContent = '❌ Erro: ' + err.message;
+                });
+        }
+
+        function encerrarChamada() {
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            }
+            document.getElementById('localVideo').srcObject = null;
+            document.getElementById('videoContainer').style.display = 'none';
+            document.getElementById('startCallBtn').style.display = 'inline-block';
+            document.getElementById('endCallBtn').style.display = 'none';
+            document.getElementById('callStatus').textContent = '📴 Chamada encerrada.';
+        }
+
+        function compartilharTela() {
+            if (!localStream) { alert('Inicie a chamada primeiro!'); return; }
+            navigator.mediaDevices.getDisplayMedia({ video: true })
+                .then(stream => {
+                    const videoTrack = stream.getVideoTracks()[0];
+                    const sender = localStream.getVideoTracks()[0];
+                    localStream.removeTrack(sender);
+                    localStream.addTrack(videoTrack);
+                    document.getElementById('localVideo').srcObject = localStream;
+                    document.getElementById('callStatus').textContent = '🖥️ Compartilhando tela!';
+                })
+                .catch(err => {
+                    document.getElementById('callStatus').textContent = '❌ Erro: ' + err.message;
+                });
+        }
+
+        // ============================================
+        // ARQUIVOS
+        // ============================================
+        function atualizarArquivos() {
+            const container = document.getElementById('filesList');
+            if (!files.length) {
+                container.innerHTML = `<p style="color: #666;">Nenhum arquivo.</p>`;
+                return;
+            }
+            container.innerHTML = files.map((f, i) => `
+                <div class="d-flex justify-content-between align-items-center" style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.03);">
+                    <div>
+                        <i class="fas fa-${f.categoria === 'Imagens' ? 'image' : f.categoria === 'Videos' ? 'video' : 'file'}" style="color:#dc2626;"></i>
+                        <a href="${f.url}" target="_blank" style="color:#e0e0e0; text-decoration:none;">${f.nome}</a>
+                        <small style="color:#666;"> (${f.categoria})</small>
+                    </div>
+                    ${currentUser?.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="removerArquivo(${i})" style="background:none; border:none; color:#f87171;"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function adicionarArquivo() {
+            const url = document.getElementById('fileUrlInput').value.trim();
+            const nome = document.getElementById('fileNameInput').value.trim() || 'Arquivo';
+            const categoria = document.getElementById('fileCategory').value;
+            if (!url) { alert('Insira a URL.'); return; }
+            files.push({ url, nome, categoria, data: new Date().toISOString() });
+            document.getElementById('fileUrlInput').value = '';
+            document.getElementById('fileNameInput').value = '';
+            saveAppData();
+            atualizarArquivos();
+        }
+
+        window.removerArquivo = function(i) {
+            if (confirm('Remover?')) { files.splice(i, 1); saveAppData(); atualizarArquivos(); }
+        };
+
+        // ============================================
+        // LINKS
+        // ============================================
+        function atualizarLinks() {
+            const container = document.getElementById('linksList');
+            if (!links.length) {
+                container.innerHTML = `<p style="color: #666;">Nenhum link.</p>`;
+                return;
+            }
+            container.innerHTML = links.map((l, i) => `
+                <div class="d-flex justify-content-between align-items-center" style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.03);">
+                    <div>
+                        <i class="fas fa-link" style="color:#dc2626;"></i>
+                        <a href="${l.url}" target="_blank" style="color:#e0e0e0; text-decoration:none;">${l.titulo}</a>
+                    </div>
+                    ${currentUser?.role === 'admin' ? `<button class="btn btn-sm btn-danger" onclick="removerLink(${i})" style="background:none; border:none; color:#f87171;"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function adicionarLink() {
+            const url = document.getElementById('linkUrlInput').value.trim();
+            const titulo = document.getElementById('linkTitleInput').value.trim() || url;
+            if (!url) { alert('Insira a URL.'); return; }
+            if (!url.startsWith('http')) { alert('URL inválida.'); return; }
+            links.push({ url, titulo, data: new Date().toISOString() });
+            document.getElementById('linkUrlInput').value = '';
+            document.getElementById('linkTitleInput').value = '';
+            saveAppData();
+            atualizarLinks();
+        }
+
+        window.removerLink = function(i) {
+            if (confirm('Remover?')) { links.splice(i, 1); saveAppData(); atualizarLinks(); }
+        };
+
+        // ============================================
+        // REGRAS
+        // ============================================
+        function atualizarRegras() {
+            const list = document.getElementById('rulesList');
+            list.innerHTML = rules.map((r, i) =>
+                `<li><span class="num">${i+1}</span> <span>${r}</span></li>`
+            ).join('');
+        }
+
+        function salvarRegras() {
+            const text = document.getElementById('rulesEditor').value;
+            const lines = text.split('\n').filter(l => l.trim());
+            rules = lines.map(l => l.replace(/^\d+\.\s*/, '').trim());
+            saveAppData();
+            atualizarRegras();
+            alert('✅ Regras salvas!');
+        }
+
+        // ============================================
+        // ADMIN
+        // ============================================
+        function atualizarAdmin() {
+            if (!currentUser || currentUser.role !== 'admin') {
+                document.getElementById('page-admin').style.display = 'none';
+                return;
+            }
+            document.getElementById('page-admin').style.display = 'block';
+
+            const ipContainer = document.getElementById('ipList');
+            ipContainer.innerHTML = Object.entries(allowedIPs).map(([nome, ip]) => `
+                <div class="ip-item">
+                    <span><strong>${nome}</strong> - ${ip}</span>
+                    ${nome !== 'rafael' ? `<button onclick="removerIP('${nome}')"><i class="fas fa-trash"></i></button>` : '<span style="color:#666;">(admin)</span>'}
+                </div>
+            `).join('');
+        }
+
+        function adicionarIP() {
+            const ip = document.getElementById('newIpInput').value.trim();
+            const nome = document.getElementById('newIpName').value.trim().toLowerCase();
+            if (!ip || !nome) { alert('Preencha IP e nome.'); return; }
+            if (Object.values(allowedIPs).includes(ip)) { alert('IP já autorizado.'); return; }
+            if (Object.keys(allowedIPs).includes(nome)) { alert('Nome já existe.'); return; }
+            allowedIPs[nome] = ip;
+            document.getElementById('newIpInput').value = '';
+            document.getElementById('newIpName').value = '';
+            saveAppData();
+            atualizarAdmin();
+            alert('✅ IP adicionado!');
+        }
+
+        window.removerIP = function(nome) {
+            if (nome === 'rafael') { alert('Não pode remover admin.'); return; }
+            if (confirm(`Remover ${nome}?`)) {
+                delete allowedIPs[nome];
+                saveAppData();
+                atualizarAdmin();
+            }
+        };
+
+        function gerarConvite() {
+            const link = `https://anarquia-${Date.now().toString(36)}.hub`;
+            document.getElementById('inviteLinkDisplay').value = link;
+            alert('🔗 Link gerado! Copie e compartilhe.');
+        }
+
+        // ============================================
+        // EVENTO LOGIN
+        // ============================================
+        document.getElementById('loginBtn').addEventListener('click', verificarAcesso);
+        document.getElementById('loginSenha').addEventListener('keypress', e => { if (e.key === 'Enter') verificarAcesso(); });
+
+        // ============================================
+        // INICIALIZAÇÃO
+        // ============================================
+        async function init() {
+            const ip = await obterIP();
+            document.getElementById('loginIp').value = ip;
+            const savedData = getCurrentUserData();
+            if (savedData && Object.values(allowedIPs).includes(savedData.ip)) {
+                currentUser = savedData;
+                entrarNoApp();
+                return;
+            }
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+        }
+
+        init();
+    })();
+</script>
+</body>
+</html>
