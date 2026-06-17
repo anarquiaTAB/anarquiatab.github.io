@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA CENTRAL - GRUPO ANARQUIA</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #050505;
+            color: #e5e7eb;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Efeito de Linhas de Varredura CRT */
+        .crt-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 999;
+            pointer-events: none;
+        }
+
+        /* Estilo customizado para scrollbars do Terminal */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff0033;
+            border-radius: 3px;
+        }
+
+        /* Animação de Pulso de Segurança */
+        @keyframes pulse-red {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 0.9; }
+        }
+        .security-glow {
+            animation: pulse-red 2s infinite;
+        }
+
+        /* Marca d'água de Rastreamento (Otimizada para captura fotográfica externa) */
+        .traitor-tracing {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+            opacity: 0.025;
+            font-size: 10px;
+            color: #ffffff;
+            font-weight: bold;
+            transform: rotate(-15deg) scale(1.2);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="crt-overlay"></div>
+    <div id="root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { 
+            getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs 
+        } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        // Configuração do Firebase fornecida pelo usuário
+        const firebaseConfig = {
+            apiKey: "AIzaSyDhaHFyp0WT054-0Iq5ANeo8TyV_caYX-U",
+            authDomain: "anarquia-ab049.firebaseapp.com",
+            projectId: "anarquia-ab049",
+            storageBucket: "anarquia-ab049.appspot.com",
+            messagingSenderId: "305688304106",
+            appId: "1:305688304106:web:feacc2b5e6b2ded8399493",
+            measurementId: "G-F1FCRRZ3FS"
+        };
+
+        // Inicialização das instâncias
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Exportando utilitários para o escopo global para consumo do componente React Babel
+        window.FirebaseDB = {
+            db, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, updateDoc, deleteDoc, getDocs
+        };
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function App() {
+            const [user, setUser] = useState(localStorage.getItem('anq_user') || '');
+            const [inputUser, setInputUser] = useState('');
+            const [activeTab, setActiveTab] = useState('chat'); // chat ou dossiers
+            const [securityViolation, setSecurityViolation] = useState(false);
+            const [loading, setLoading] = useState(true);
+            const [watermarkId, setWatermarkId] = useState('');
+
+            // Estados do Chat
+            const [messages, setMessages] = useState([]);
+            const [newMessage, setNewMessage] = useState('');
+            const chatEndRef = useRef(null);
+
+            // Estados dos Dossiês
+            const [dossiers, setDossiers] = useState([]);
+            const [dossierTitle, setDossierTitle] = useState('');
+            const [dossierContent, setDossierContent] = useState('');
+            const [dossierImage, setDossierImage] = useState('');
+
+            // Estado do Painel Administrativo
+            const [showAdminModal, setShowAdminModal] = useState(false);
+            const [adminPass, setAdminPass] = useState('');
+
+            // Função de codificação simples para obscurecer strings no Firestore
+            const encodeStr = (str) => btoa(encodeURIComponent(str));
+            const decodeStr = (str) => {
+                try { return decodeURIComponent(atob(str)); } 
+                catch(e) { return "[ERRO DE DECRIPTAÇÃO]"; }
+            };
+
+            // 1. Controles de Segurança e Restrições de Interface
+            useEffect(() => {
+                // Simulação de carregamento de arquivos criptografados
+                const timer = setTimeout(() => setLoading(false), 2000);
+
+                // Geração do identificador de rastreamento exclusivo do dispositivo
+                setWatermarkId(`TR-ID:${Math.floor(100000 + Math.random() * 900000)}:[${navigator.platform}]`);
+
+                // Bloqueio de Clique com Botão Direito
+                const handleContextMenu = (e) => e.preventDefault();
+                document.addEventListener('contextmenu', handleContextMenu);
+
+                // Bloqueio de atalhos comuns (Cópia, Impressão, Inspeção)
+                const handleKeyDown = (e) => {
+                    if (
+                        e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'p' || e.key === 'P' || e.key === 'u' || e.key === 'U') ||
+                        e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'I')
+                    ) {
+                        e.preventDefault();
+                        setSecurityViolation(true);
+                    }
+                };
+                document.addEventListener('keydown', handleKeyDown);
+
+                // Bloqueio de Foco de Aba / Detecção de perda de visibilidade
+                const handleVisibilityChange = () => {
+                    if (document.hidden) {
+                        setSecurityViolation(true);
+                    }
+                };
+                document.addEventListener('visibilitychange', handleVisibilityChange);
+
+                return () => {
+                    clearTimeout(timer);
+                    document.removeEventListener('contextmenu', handleContextMenu);
+                    document.removeEventListener('keydown', handleKeyDown);
+                    document.removeEventListener('visibilitychange', handleVisibilityChange);
+                };
+            }, []);
+
+            // 2. Sincronização do Chat em Tempo Real com Firestore
+            useEffect(() => {
+                if (!user || loading) return;
+                const { db, collection, query, orderBy, onSnapshot } = window.FirebaseDB;
+
+                const q = query(collection(db, "chat"), orderBy("timestamp", "asc"));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const loadedMsgs = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        loadedMsgs.push({
+                            id: doc.id,
+                            user: data.user ? decodeStr(data.user) : 'Anônimo',
+                            text: data.text ? decodeStr(data.text) : '',
+                            timestamp: data.timestamp
+                        });
+                    });
+                    setMessages(loadedMsgs);
+                    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+                });
+
+                return () => unsubscribe();
+            }, [user, loading]);
+
+            // 3. Sincronização dos Dossiês com Firestore
+            useEffect(() => {
+                if (!user || loading) return;
+                const { db, collection, query, orderBy, onSnapshot } = window.FirebaseDB;
+
+                const q = query(collection(db, "dossiers"), orderBy("timestamp", "desc"));
+                const unsubscribe = onSnapshot(q, (snapshot) => {
+                    const loadedDossiers = [];
+                    snapshot.forEach((doc) => {
+                        const data = doc.data();
+                        loadedDossiers.push({
+                            id: doc.id,
+                            title: data.title ? decodeStr(data.title) : '',
+                            content: data.content ? decodeStr(data.content) : '',
+                            image: data.image || '',
+                            author: data.author ? decodeStr(data.author) : 'Anônimo',
+                            votes: data.votes || 0,
+                            votedUsers: data.votedUsers || []
+                        });
+                    });
+                    setDossiers(loadedDossiers);
+                });
+
+                return () => unsubscribe();
+            }, [user, loading]);
+
+            // Handlers do Chat
+            const handleSendMessage = async (e) => {
+                e.preventDefault();
+                if (!newMessage.trim()) return;
+                const { db, collection, addDoc, serverTimestamp } = window.FirebaseDB;
+
+                try {
+                    await addDoc(collection(db, "chat"), {
+                        user: encodeStr(user),
+                        text: encodeStr(newMessage),
+                        timestamp: serverTimestamp()
+                    });
+                    setNewMessage('');
+                } catch (err) {
+                    console.error("Erro ao transmitir pacote:", err);
+                }
+            };
+
+            // Handlers dos Dossiês
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => setDossierImage(reader.result); // Base64 String
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleCreateDossier = async (e) => {
+                e.preventDefault();
+                if (!dossierTitle.trim() || !dossierContent.trim()) return;
+                const { db, collection, addDoc, serverTimestamp } = window.FirebaseDB;
+
+                try {
+                    await addDoc(collection(db, "dossiers"), {
+                        title: encodeStr(dossierTitle),
+                        content: encodeStr(dossierContent),
+                        image: dossierImage,
+                        author: encodeStr(user),
+                        votes: 0,
+                        votedUsers: [],
+                        timestamp: serverTimestamp()
+                    });
+                    setDossierTitle('');
+                    setDossierContent('');
+                    setDossierImage('');
+                } catch (err) {
+                    console.error("Erro ao registrar dossiê:", err);
+                }
+            };
+
+            const handleVote = async (id, currentVotes, votedUsers, type) => {
+                const { db, doc, updateDoc } = window.FirebaseDB;
+                if (votedUsers.includes(user)) return; // Restrição de um voto por usuário
+
+                const newVotes = type === 'up' ? currentVotes + 1 : currentVotes - 1;
+                const updatedUsers = [...votedUsers, user];
+
+                try {
+                    await updateDoc(doc(db, "dossiers", id), {
+                        votes: newVotes,
+                        votedUsers: updatedUsers
+                    });
+                } catch (err) {
+                    console.error("Erro ao computar voto:", err);
+                }
+            };
+
+            const handleDeleteDossier = async (id, author) => {
+                if (author !== user) return;
+                const { db, doc, deleteDoc } = window.FirebaseDB;
+                if (confirm("Confirmar destruição permanente deste registro?")) {
+                    try {
+                        await deleteDoc(doc(db, "dossiers", id));
+                    } catch (err) {
+                        console.error("Erro ao deletar registro:", err);
+                    }
+                }
+            };
+
+            // Purga Global - Função Administrativa de Emergência
+            const handleEmergencyPurge = async () => {
+                if (adminPass !== "ADMIN-8085") {
+                    alert("Acesso Negado: Assinatura inválida.");
+                    return;
+                }
+                const { db, collection, getDocs, deleteDoc, doc } = window.FirebaseDB;
+                
+                try {
+                    const querySnapshot = await getDocs(collection(db, "chat"));
+                    const deletePromises = [];
+                    querySnapshot.forEach((documento) => {
+                        deletePromises.push(deleteDoc(doc(db, "chat", documento.id)));
+                    });
+                    await Promise.all(deletePromises);
+                    alert("PULSO ELETROMAGNÉTICO EXECUTADO: Banco do chat purgado com sucesso.");
+                    setShowAdminModal(false);
+                    setAdminPass('');
+                } catch (err) {
+                    console.error("Falha na purga:", err);
+                }
+            };
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (inputUser.trim()) {
+                    localStorage.setItem('anq_user', inputUser.trim());
+                    setUser(inputUser.trim());
+                }
+            };
+
+            // Tela de Violação Ativa
+            if (securityViolation) {
+                return (
+                    <div className="fixed inset-0 bg-black flex flex-col justify-center items-center z-[10000] border-4 border-red-600 p-4">
+                        <h1 className="text-red-600 text-3xl font-bold mb-4 tracking-wider security-glow">🚨 ALERTA DE SEGURANÇA INTERNA</h1>
+                        <p className="text-gray-400 text-center max-w-md mb-6">
+                            Foco do terminal perdido ou tentativa de inspeção de código detectada. A sessão atual foi congelada preventivamente para evitar vazamento de dados.
+                        </p>
+                        <button 
+                            onClick={() => setSecurityViolation(false)} 
+                            className="bg-red-900/40 border border-red-600 text-red-500 px-6 py-2 rounded font-bold hover:bg-red-600 hover:text-white transition-all cursor-pointer"
+                        >
+                            RE-AUTENTICAR TERMINAL
+                        </button>
+                    </div>
+                );
+            }
+
+            // Tela de Carregamento Criptográfico
+            if (loading) {
+                return (
+                    <div className="fixed inset-0 bg-[#050505] flex flex-col justify-center items-center z-[999]">
+                        <div className="w-16 h-16 border-4 border-t-red-600 border-gray-900 rounded-full animate-spin mb-4"></div>
+                        <p className="text-red-500 font-bold tracking-widest text-sm animate-pulse">CARREGANDO ARQUIVOS CONFIDENCIAIS...</p>
+                        <span className="text-gray-600 text-xs mt-2 font-mono">Estabelecendo túnel seguro...</span>
+                    </div>
+                );
+            }
+
+            // Tela de Registro / Login
+            if (!user) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="w-full max-w-md bg-[#0a0a0a] border border-red-900/60 p-6 rounded-lg shadow-2xl relative">
+                            <div className="absolute top-2 right-3 text-[9px] text-red-700/60">SYS_V: 11.2.6</div>
+                            <h2 className="text-red-600 text-xl font-bold mb-1 tracking-wider text-center">GRUPO ANARQUIA</h2>
+                            <p className="text-gray-500 text-xs text-center mb-6">SISTEMA CENTRAL DE SINALIZAÇÃO COGNITIVA</p>
+                            
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <label className="block text-gray-400 text-xs mb-2">IDENTIFICAÇÃO (CODENOME):</label>
+                                    <input 
+                                        type="text" 
+                                        value={inputUser}
+                                        onChange={(e) => setInputUser(e.target.value)}
+                                        className="w-full bg-black border border-gray-800 focus:border-red-600 text-red-500 px-3 py-2 rounded font-mono outline-none text-sm tracking-wide"
+                                        placeholder="Ex: Operator_X"
+                                        required 
+                                    />
+                                </div>
+                                <button type="submit" className="w-full bg-red-950/40 border border-red-600 hover:bg-red-600 text-red-500 hover:text-white font-bold py-2 rounded text-sm transition-all cursor-pointer">
+                                    INICIALIZAR CONEXÃO
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen flex flex-col max-w-7xl mx-auto p-2 md:p-4 relative">
+                    
+                    {/* Renderização Dinâmica da Marca d'água */}
+                    <div className="traitor-tracing">
+                        {Array.from({ length: 24 }).map((_, i) => (
+                            <div key={i} className="select-none">{watermarkId}</div>
+                        ))}
+                    </div>
+
+                    {/* Cabeçalho do Terminal */}
+                    <header className="bg-[#0a0a0a] border border-gray-900 p-4 rounded-t-lg flex flex-col sm:flex-row justify-between items-center gap-3">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-red-600 security-glow"></div>
+                            <div>
+                                <h1 className="text-red-500 font-bold tracking-widest text-sm md:text-base">ANARQUIA // CENTRAL</h1>
+                                <p className="text-[10px] text-gray-500">OPERADOR ATIVO: <span className="text-gray-300 font-bold">{user}</span></p>
+                            </div>
+                        </div>
+
+                        {/* Abas e Controles */}
+                        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <button 
+                                onClick={() => setActiveTab('chat')}
+                                className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${activeTab === 'chat' ? 'bg-red-900/30 text-red-500 border border-red-600' : 'text-gray-500 hover:text-gray-300'}`}
+                                          COMUNICAÇÃO (CHAT)
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('dossiers')}
+                                className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer ${activeTab === 'dossiers' ? 'bg-red-900/30 text-red-500 border border-red-600' : 'text-gray-500 hover:text-gray-300'}`}
+                            >
+                                DOSSIÊS / ALVOS
+                            </button>
+                            <button 
+                                onClick={() => setShowAdminModal(true)}
+                                className="p-1.5 rounded text-gray-600 hover:text-red-500 hover:bg-red-950/20 border border-transparent hover:border-red-900/50 transition-all cursor-pointer"
+                                title="Painel Admin de Emergência"
+                            >
+                                ⚙️
+                            </button>
+                        </div>
+                    </header>
+
+                    {/* Área Principal do Conteúdo */}
+                    <main className="flex-1 bg-[#070707] border-x border-b border-gray-900 p-3 md:p-4 rounded-b-lg flex flex-col overflow-hidden min-h-[500px]">
+                        
+                        {/* FLUXO MÓDULO CHAT */}
+                        {activeTab === 'chat' && (
+                            <div className="flex flex-col flex-1 h-full">
+                                <div className="flex-1 min-h-[350px] max-h-[60vh] overflow-y-auto space-y-3 pr-2 mb-4">
+                                    {messages.map((msg) => (
+                                        <div key={msg.id} className="bg-black/40 border-l-2 border-gray-800 p-2 rounded text-sm max-w-3xl">
+                                            <div className="flex items-baseline justify-between mb-1">
+                                                <span className={`font-bold text-xs ${msg.user === user ? 'text-red-500' : 'text-gray-400'}`}>
+                                                    {msg.user} {msg.user === user && "(Você)"}
+                                                </span>
+                                                <span className="text-[9px] text-gray-600">
+                                                    {msg.timestamp?.toDate() ? new Date(msg.timestamp.toDate()).toLocaleTimeString() : 'Transmitindo...'}
+                                                </span>
+                                            </div>
+                                            <p className="text-gray-300 break-words font-mono text-xs selection:bg-transparent">{msg.text}</p>
+                                        </div>
+                                    ))}
+                                    <div ref={chatEndRef} />
+                                </div>
+
+                                <form onSubmit={handleSendMessage} className="flex gap-2 border-t border-gray-900 pt-3">
+                                    <input 
+                                        type="text" 
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        className="flex-1 bg-black border border-gray-800 focus:border-red-600 px-3 py-2 text-sm text-gray-300 outline-none rounded font-mono"
+                                        placeholder="Digite sua transmissão criptografada..."
+                                    />
+                                    <button type="submit" className="bg-red-950/20 border border-red-700/60 hover:bg-red-600 px-4 text-xs font-bold text-red-500 hover:text-white rounded transition-all cursor-pointer">
+                                        ENVIAR
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {/* FLUXO MÓDULO DOSSIÊS */}
+                        {activeTab === 'dossiers' && (
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 items-start">
+                                
+                                {/* Painel de Criação */}
+                                <div className="bg-[#0a0a0a] border border-gray-900 p-4 rounded-lg lg:col-span-1">
+                                    <h3 className="text-red-500 text-xs font-bold mb-3 tracking-wider">NOVO DOSSIÊ / ALVO</h3>
+                                    <form onSubmit={handleCreateDossier} className="space-y-3 text-xs">
+                                        <div>
+                                            <label className="block text-gray-500 mb-1">ALVO / TÍTULO:</label>
+                                            <input 
+                                                type="text" 
+                                                value={dossierTitle}
+                                                onChange={(e) => setDossierTitle(e.target.value)}
+                                                className="w-full bg-black border border-gray-800 focus:border-red-600 p-2 text-gray-300 outline-none rounded"
+                                                placeholder="Codinome ou Operação" required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-500 mb-1">DADOS COLETADOS:</label>
+                                            <textarea 
+                                                rows="4"
+                                                value={dossierContent}
+                                                onChange={(e) => setDossierContent(e.target.value)}
+                                                className="w-full bg-black border border-gray-800 focus:border-red-600 p-2 text-gray-300 outline-none rounded resize-none"
+                                                placeholder="Descreva as evidências técnicas..." required
+                                            ></textarea>
+                                        </div>
+                                        <div>
+                                            <label className="block text-gray-500 mb-1">EVIDÊNCIA VISUAL (PNG/JPG):</label>
+                                            <input 
+                                                type="file" 
+                                                accept="image/*"
+                                                onChange={handleImageUpload}
+                                                className="w-full text-gray-600 file:bg-zinc-900 file:border-0 file:text-xs file:text-red-500 file:px-2 file:py-1 file:rounded file:cursor-pointer"
+                                            />
+                                            {dossierImage && (
+                                                <div className="mt-2 text-green-600 text-[10px] truncate">✓ Imagem anexada e encodada com sucesso.</div>
+                                            )}
+                                        </div>
+                                        <button type="submit" className="w-full bg-red-950/20 border border-red-700/60 hover:bg-red-600 py-2 font-bold text-red-500 hover:text-white rounded transition-all cursor-pointer">
+                                            PUBLICAR DOSSIÊ
+                                        </button>
+                                    </form>
+                                </div>
+
+                                {/* Feed de Dossiês */}
+                                <div className="lg:col-span-2 space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+                                    {dossiers.length === 0 ? (
+                                        <div className="text-center text-gray-600 text-xs py-12">Nenhum dossiê registrado na rede.</div>
+                                    ) : (
+                                        dossiers.map((dos) => (
+                                            <div key={dos.id} className="bg-black/50 border border-gray-900 p-4 rounded-lg flex flex-col gap-3 relative">
+                                                
+                                                {/* Autor / Deleção */}
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h4 className="text-red-500 font-bold text-sm tracking-wide">{dos.title}</h4>
+                                                        <span className="text-[10px] text-gray-600">Registrado por: {dos.author}</span>
+                                                    </div>
+                                                    {dos.author === user && (
+                                                        <button 
+                                                            onClick={() => handleDeleteDossier(dos.id, dos.author)}
+                                                            className="text-xs text-red-800 hover:text-red-500 cursor-pointer"
+                                                        >
+                                                            [DELETAR]
+                                                        </button>
+                                                    )}
+                                                </div>
+
+                                                {/* Conteúdo */}
+                                                <p className="text-gray-300 text-xs whitespace-pre-wrap leading-relaxed">{dos.content}</p>
+
+                                                {/* Imagem em Base64 */}
+                                                {dos.image && (
+                                                    <div className="border border-zinc-900 rounded overflow-hidden max-w-md bg-black">
+                                                        <img src={dos.image} alt="Evidência" className="w-full object-contain max-h-60 opacity-80 hover:opacity-100 transition-opacity" />
+                                                    </div>
+                                                )}
+
+                                                {/* Sistema de Upvotes/Downvotes */}
+                                                <div className="flex items-center gap-3 border-t border-zinc-900/60 pt-2 mt-1">
+                                                    <span className="text-[10px] text-gray-500">CONFIABILIDADE DOS DADOS:</span>
+                                                    <div className="flex items-center gap-1 bg-black px-2 py-1 rounded border border-zinc-900">
+                                                        <button 
+                                                            onClick={() => handleVote(dos.id, dos.votes, dos.votedUsers, 'up')}
+                                                            disabled={dos.votedUsers.includes(user)}
+                                                            className={`text-xs font-bold px-1 ${dos.votedUsers.includes(user) ? 'text-gray-700 cursor-not-allowed' : 'text-green-600 hover:text-green-400 cursor-pointer'}`}
+                                                        >
+                                                            ▲
+                                                        </button>
+                                                        <span className={`text-xs font-bold px-1 ${dos.votes >= 0 ? 'text-gray-400' : 'text-red-500'}`}>{dos.votes}</span>
+                                                        <button 
+                                                            onClick={() => handleVote(dos.id, dos.votes, dos.votedUsers, 'down')}
+                                                            disabled={dos.votedUsers.includes(user)}
+                                                            className={`text-xs font-bold px-1 ${dos.votedUsers.includes(user) ? 'text-gray-700 cursor-not-allowed' : 'text-red-600 hover:text-red-400 cursor-pointer'}`}
+                                                        >
+                                                            ▼
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+
+                            </div>
+                        )}
+
+                    </main>
+
+                    {/* MODAL ADMIN - PURGA DE EMERGÊNCIA */}
+                    {showAdminModal && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-[1000]">
+                            <div className="bg-[#0d0d0d] border border-red-600 p-6 rounded-lg w-full max-w-sm shadow-2xl">
+                                <h3 className="text-red-500 font-bold text-sm mb-2 tracking-widest">PROTOCOLO DE PURGA</h3>
+                                <p className="text-gray-500 text-xs mb-4">Insira a chave mestre para limpar os logs de chat da rede.</p>
+                                <input 
+                                    type="password" 
+                                    value={adminPass}
+                                    onChange={(e) => setAdminPass(e.target.value)}
+                                    className="w-full bg-black border border-gray-800 focus:border-red-600 text-red-500 p-2 text-xs font-mono rounded outline-none mb-4"
+                                    placeholder="CHAVE DE AUTENTICAÇÃO"
+                                />
+                                <div className="flex gap-2 justify-end">
+                                    <button 
+                                        onClick={() => { setShowAdminModal(false); setAdminPass(''); }}
+                                        className="text-xs text-gray-500 hover:text-gray-300 px-3 py-1.5 cursor-pointer"
+                                    >
+                                        CANCELAR
+                                    </button>
+                                    <button 
+                                        onClick={handleEmergencyPurge}
+                                        className="bg-red-950/40 border border-red-600 hover:bg-red-600 text-red-500 hover:text-white font-bold text-xs px-3 py-1.5 rounded transition-all cursor-pointer"
+                                    >
+                                        EXECUTAR PURGA
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
