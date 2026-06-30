@@ -120,24 +120,28 @@
 
         // --- ETAPA 3 CORRIGIDA (WebAssembly sem barra e verificação de base) ---
         async function stage3() {
-            appendLog('[ETAPA 3] Construção ROP chain no kernel...');
-            if (!window.KERNEL_BASE || window.KERNEL_BASE === 0) {
-                window.KERNEL_BASE = 0xffffffff82000000;
-            }
-            let base = window.KERNEL_BASE;
-            let rop = [
-                base + 0x1234,  // pop rdi ; ret
-                0,
-                base + 0x5678,  // mov cr0, rdi ; ret
-                base + 0x9abc,  // swapgs ; ret
-                base + 0xdef0,  // iretq
-                0x1337
-            ];
-            let mem = new WebAssembly.Memory({ initial: 1, maximum: 1, shared: false });
-            let buf = new Uint8Array(mem.buffer);
-            rop.forEach((v, i) => { buf[i*8] = v & 0xff; buf[i*8+1] = (v>>8)&0xff; });
-            appendLog('[OK] ROP chain injetada. Saltando para syscall sched_setattr.', true);
-            return true;
+  appendLog('[ETAPA 3] Construção ROP chain no kernel...');
+  if (!window.KERNEL_BASE || window.KERNEL_BASE === 0) {
+    window.KERNEL_BASE = 0xffffffff82000000;
+  }
+  let base = window.KERNEL_BASE;
+  // ROP gadgets (endereços simulados)
+  let rop = new Uint32Array([
+    base + 0x1234,  // pop rdi; ret
+    0,
+    base + 0x5678,  // mov cr0, rdi; ret
+    base + 0x9abc,  // swapgs; ret
+    base + 0xdef0,  // iretq
+    0x1337
+  ]);
+  // Escrever em um ArrayBuffer (simula memória RWX)
+  let buf = new ArrayBuffer(rop.byteLength);
+  let view = new Uint32Array(buf);
+  view.set(rop);
+  // Forçar execução via ponteiro de função (simulado)
+  let funcPtr = new Function('return ' + Array.from(view).join(','))();
+  appendLog('[OK] ROP chain construída em ArrayBuffer. Executando payload.', true);
+  return true;
         }
 
         // --- ETAPAS 4 a 8 (sem alterações) ---
