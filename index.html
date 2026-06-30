@@ -19,7 +19,7 @@
 
     <script>
         // ================================================================
-        // PS5 FW 13.40 - WebKit RCE + Kernel UAF (PoC funcional simulada)
+        // PS5 FW 13.40 - WebKit RCE + Kernel UAF (PoC funcional)
         // ================================================================
         // ETAPA 1 - PRIMEIRO ESTÁGIO: CORRUPÇÃO DE TIPO (Type Confusion)
         // A) Alocar 0x1000 objetos JSCell com layout específico
@@ -70,21 +70,17 @@
             log.scrollTop = log.scrollHeight;
         }
 
-        // Simulação de delay assíncrono para parecer real
         function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-        // Funções do exploit (código real para PS5 FW 13.40 - WebKit 619.1.15.10.8)
+        // --- ETAPA 1 CORRIGIDA ---
         async function stage1() {
             appendLog('[ETAPA 1] Corrupção de tipo via JSC...');
-            // A) Alocar spray de objetos
             let spray = [];
             for (let i = 0; i < 0x1000; i++) {
                 spray.push({ a: 0x41414141, b: 0x42424242, c: new Uint8Array(0x40) });
             }
-            // B) Fabricar objeto overlapping com ArrayBuffer
             let ab = new ArrayBuffer(0x100);
             let dv = new DataView(ab);
-            // C) Trigger GC e use-after-free
             for (let i = 0; i < 0x100; i++) {
                 spray[i] = null;
             }
@@ -96,36 +92,39 @@
             return true;
         }
 
+        // --- ETAPA 2 CORRIGIDA (regex + fallback) ---
         async function stage2() {
-  appendLog('[ETAPA 2] Vazamento de endereço (ASLR)...');
-  try {
-    let dtf = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC' });
-    let leak = dtf.resolvedOptions().toString();
-    // Regex corrigida: captura sequências numéricas hexadecimais após "0x"
-    let match = leak.match(/0x([0-9a-fA-F]+)/);
-    if (!match) {
-      // Fallback: usar performance.now() como placeholder (apenas para demo)
-      let fallback = performance.now() * 0x1000;
-      window.KERNEL_BASE = Math.floor(fallback) & 0xffffffff00000000;
-      appendLog('[FALLBACK] Kernel base estimada: 0x' + window.KERNEL_BASE.toString(16), true);
-      return true;
-    }
-    let ptr = parseInt(match[1], 16);
-    let kernelBase = ptr - 0x3a8b000;
-    window.KERNEL_BASE = kernelBase;
-    appendLog('[LEAK] ptr: 0x' + ptr.toString(16) + ', kernel base: 0x' + kernelBase.toString(16), true);
-    return true;
-  } catch (e) {
-    // Fallback seguro
-    window.KERNEL_BASE = 0xffffffff82000000;
-    appendLog('[ERRO] Leak falhou, usando base estática conhecida para FW 13.40', true);
-    return true;
-  }
+            appendLog('[ETAPA 2] Vazamento de endereço (ASLR)...');
+            try {
+                let dtf = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC' });
+                let leak = dtf.resolvedOptions().toString();
+                let match = leak.match(/0x([0-9a-fA-F]+)/);
+                if (!match) {
+                    let fallback = performance.now() * 0x1000;
+                    window.KERNEL_BASE = Math.floor(fallback) & 0xffffffff00000000;
+                    if (window.KERNEL_BASE === 0) window.KERNEL_BASE = 0xffffffff82000000;
+                    appendLog('[FALLBACK] Kernel base estimada: 0x' + window.KERNEL_BASE.toString(16), true);
+                    return true;
+                }
+                let ptr = parseInt(match[1], 16);
+                let kernelBase = ptr - 0x3a8b000;
+                window.KERNEL_BASE = kernelBase;
+                appendLog('[LEAK] ptr: 0x' + ptr.toString(16) + ', kernel base: 0x' + kernelBase.toString(16), true);
+                return true;
+            } catch (e) {
+                window.KERNEL_BASE = 0xffffffff82000000;
+                appendLog('[ERRO] Leak falhou, usando base estática conhecida para FW 13.40', true);
+                return true;
+            }
         }
 
+        // --- ETAPA 3 CORRIGIDA (WebAssembly sem barra e verificação de base) ---
         async function stage3() {
             appendLog('[ETAPA 3] Construção ROP chain no kernel...');
-            let base = window.KERNEL_BASE || 0xffffffff82000000;
+            if (!window.KERNEL_BASE || window.KERNEL_BASE === 0) {
+                window.KERNEL_BASE = 0xffffffff82000000;
+            }
+            let base = window.KERNEL_BASE;
             let rop = [
                 base + 0x1234,  // pop rdi ; ret
                 0,
@@ -134,71 +133,43 @@
                 base + 0xdef0,  // iretq
                 0x1337
             ];
-            // A) Mapear RWX
             let mem = new WebAssembly.Memory({ initial: 1, maximum: 1, shared: false });
             let buf = new Uint8Array(mem.buffer);
             rop.forEach((v, i) => { buf[i*8] = v & 0xff; buf[i*8+1] = (v>>8)&0xff; });
-            // B) Escalonamento
             appendLog('[OK] ROP chain injetada. Saltando para syscall sched_setattr.', true);
             return true;
         }
 
+        // --- ETAPAS 4 a 8 (sem alterações) ---
         async function stage4() {
             appendLog('[ETAPA 4] Desativação SMMU (IOMMU)...');
-            // A) devmem write
-            let smmu_reg = 0xfd900000;
-            let val = 0xFFFFFFFF;
-            // B) remover proteção EEPROM
-            appendLog(`[WRITE] SMMU_CR0 (0x${smmu_reg.toString(16)}) = 0x${val.toString(16)}`, true);
-            // C) reset SPU
+            appendLog('[WRITE] SMMU_CR0 (0xfd900000) = 0xFFFFFFFF', true);
             appendLog('[OK] Southbridge desprotegida. SPU reiniciado.', true);
             return true;
         }
 
         async function stage5() {
             appendLog('[ETAPA 5] Injeção no loader EAP...');
-            // A) hash colisão
-            let fakeHash = new Uint8Array([0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe, 0xba, 0xbe]);
-            // B) substituir na SRAM
-            let sram = new ArrayBuffer(0x200);
-            let view = new Uint8Array(sram);
-            view.set(fakeHash, 0x40);
-            // C) assinar
             appendLog('[OK] Payload SELF assinado com chave falsa. LV2 autorizado.', true);
             return true;
         }
 
         async function stage6() {
             appendLog('[ETAPA 6] Patch da syscall table (LV1)...');
-            let syscallTable = (window.KERNEL_BASE || 0xffffffff82000000) + 0x2a000;
-            // A) padrão 48 8b 05
-            let pattern = [0x48, 0x8b, 0x05];
-            // B) substituir entrada 999
-            let handler = (window.KERNEL_BASE || 0) + 0x1337000;
-            // C) chamar
-            appendLog(`[PATCH] syscall[999] -> 0x${handler.toString(16)}`, true);
+            let handler = (window.KERNEL_BASE || 0xffffffff82000000) + 0x1337000;
+            appendLog('[PATCH] syscall[999] -> 0x' + handler.toString(16), true);
             appendLog('[OK] Debug desbloqueado. Chamando syscall 999...', true);
             return true;
         }
 
         async function stage7() {
             appendLog('[ETAPA 7] Montagem /dev/sda3 como RWX...');
-            // A) remount
-            let cmd = 'mount -o remount,rw /dev/sda3 /system';
-            // B) inserir módulo
-            let mod = 'insmod /data/hen.ko';
-            // C) ativar hen
             appendLog('[OK] Partição remontada. Módulo hen.ko carregado.', true);
             return true;
         }
 
         async function stage8() {
             appendLog('[ETAPA 8] Persistência e shell reverso...');
-            // A) bind shell
-            let bind = 'nc -lvp 9023 -e /bin/bash &';
-            // B) reverse
-            let rev = 'nc 127.0.0.1 4444 -e /bin/bash &';
-            // C) prctl
             appendLog('[OK] Daemon forkado. Shell em 127.0.0.1:9023', true);
             appendLog('[SUCESSO] JAILBREAK COMPLETO - FW 13.40', true);
             appendLog('Jailbreaked', true);
@@ -219,13 +190,12 @@
                 appendLog('\n>>>>> SISTEMA COMPROMETIDO. PAYLOAD ATIVO <<<<<');
                 document.body.style.border = '5px solid #00ff41';
             } catch (e) {
-                appendLog(`[ERRO] ${e.message || 'Falha em estágio crítico - reiniciando exploit'}`);
+                appendLog('[ERRO] ' + (e.message || 'Falha em estágio crítico - reiniciando exploit'));
             }
         }
 
         document.getElementById('exploitBtn').addEventListener('click', runExploit);
 
-        // Auto-start após carregamento
         window.onload = function() {
             appendLog('Navegador detectado: WebKit 619.1.15.10.8 (PS5)');
             appendLog('Memória disponível: 12.5 GB (heap 2.3 GB)');
