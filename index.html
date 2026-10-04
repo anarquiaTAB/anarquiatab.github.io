@@ -1,2 +1,126 @@
-<input id="u" placeholder="cola o link" style="width:80%;font-size:24px">
-<button style="font-size:24px" onclick="let v=u.value.trim();location.href=v.startsWith('http')?v:'https://'+v">Ir</button>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abrir link</title>
+<style>
+  :root{
+    --bg:#10131c; --panel:#1a1f2e; --line:#2b3350; --text:#eef1fa; --muted:#8c95b3;
+    --accent:#4d8dff; --accent-2:#2f6bdc;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+    display:flex; justify-content:center; padding:48px 24px;
+  }
+  main{width:100%; max-width:860px}
+  h1{font-size:44px; margin:0 0 8px; letter-spacing:-.02em}
+  p.sub{margin:0 0 32px; color:var(--muted); font-size:22px}
+  .row{display:flex; gap:16px}
+  input{
+    flex:1; min-width:0; font-size:28px; padding:22px 24px;
+    background:var(--panel); color:var(--text);
+    border:3px solid var(--line); border-radius:18px; outline:none;
+  }
+  input:focus{border-color:var(--accent)}
+  button{
+    font:inherit; font-size:28px; font-weight:700; cursor:pointer;
+    border:3px solid transparent; border-radius:18px; padding:22px 40px;
+    background:var(--accent); color:#fff;
+  }
+  button:hover{background:var(--accent-2)}
+  button:focus{outline:4px solid #fff; outline-offset:3px}
+  .ghost{background:transparent; color:var(--muted); border-color:var(--line); padding:12px 22px; font-size:20px; font-weight:600}
+  .ghost:hover{background:var(--panel); color:var(--text)}
+  .head{display:flex; align-items:center; justify-content:space-between; margin:44px 0 14px}
+  .head h2{margin:0; font-size:26px}
+  ul{list-style:none; margin:0; padding:0; display:grid; gap:12px}
+  li a{
+    display:block; padding:20px 24px; font-size:24px; text-decoration:none; color:var(--text);
+    background:var(--panel); border:3px solid var(--line); border-radius:16px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  li a:hover{border-color:var(--accent)}
+  li a:focus{outline:4px solid #fff; outline-offset:3px}
+  .empty{color:var(--muted); font-size:22px; padding:8px 0}
+  @media (max-width:640px){
+    .row{flex-direction:column}
+    h1{font-size:34px}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    button,input,li a{transition:background .15s,border-color .15s}
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Abrir link</h1>
+  <p class="sub">Cole o endereço e aperte Ir.</p>
+
+  <div class="row">
+    <input id="url" type="text" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="anarquiatab.github.io/ps5...">
+    <button id="go" type="button">Ir</button>
+  </div>
+
+  <div class="head">
+    <h2>Recentes</h2>
+    <button id="clear" class="ghost" type="button">Limpar</button>
+  </div>
+  <ul id="list"></ul>
+  <div id="empty" class="empty" hidden>Nenhum link ainda.</div>
+</main>
+
+<script>
+(function(){
+  var KEY="links_recentes", MAX=15;
+  var input=document.getElementById("url");
+  var list=document.getElementById("list");
+  var empty=document.getElementById("empty");
+
+  function load(){
+    try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){ return []; }
+  }
+  function save(a){
+    try{ localStorage.setItem(KEY, JSON.stringify(a)); }catch(e){}
+  }
+  function normalize(v){
+    v=v.trim();
+    if(!v) return "";
+    return /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : "https://"+v;
+  }
+  function render(){
+    var items=load();
+    list.innerHTML="";
+    empty.hidden=items.length>0;
+    items.forEach(function(u){
+      var li=document.createElement("li");
+      var a=document.createElement("a");
+      a.href=u; a.textContent=u.replace(/^https?:\/\//,"");
+      a.addEventListener("click", function(){ remember(u); });
+      li.appendChild(a); list.appendChild(li);
+    });
+  }
+  function remember(u){
+    var items=load().filter(function(x){return x!==u;});
+    items.unshift(u);
+    save(items.slice(0,MAX));
+  }
+  function go(){
+    var u=normalize(input.value);
+    if(!u){ input.focus(); return; }
+    remember(u);
+    location.href=u;
+  }
+
+  document.getElementById("go").addEventListener("click", go);
+  input.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.keyCode===13) go(); });
+  document.getElementById("clear").addEventListener("click", function(){ save([]); render(); });
+
+  render();
+})();
+</script>
+</body>
+</html>
